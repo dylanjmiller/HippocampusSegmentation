@@ -40,7 +40,7 @@ DATASET_PATH
 
 Within the `DATASET_PATH` directory, there must be a directory named `subjects`. Within the subject directory, each subject will have their own directory containing the 3 input files with file stem names matching exactly (mean_dwi, fa, md). gz compression is optional. The name of each subject directly does not need to match the above example.
 
-The output segmentations will be saved at `OUT_FOLDER` with the same per subject structure, saving the segmentation file with the provided `OUTPUT_FILENAME`.  Provide the `OUTPUT_FILENAME` without any extensions.
+The output segmentations will be saved to `OUT_FOLDER` with the same per subject structure. Each segmentation file will be saved using `OUTPUT_FILENAME`.  Provide the `OUTPUT_FILENAME` without any extensions.
 
 Example command 
 ```
