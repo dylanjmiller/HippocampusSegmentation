@@ -10,11 +10,12 @@ from segmentation_pipeline.utils.torch_context import TorchContext
 from segmentation_pipeline.post_processing import remove_holes, keep_components
 from segmentation_pipeline.models.ensemble import EnsembleFlips, EnsembleModels
 from segmentation_pipeline.transforms.replace_nan import ReplaceNan
+from segmentation_pipeline.data_processing.subject_loaders import ImageLoader
 
-from segmentation_pipeline import *
 
 # Hack so that models can load on windows
-#pathlib.PosixPath = pathlib.Path
+if os.name == 'nt':
+    pathlib.PosixPath = pathlib.Path
 
 
 def inference(subjects, predictor, model, device):
@@ -107,16 +108,20 @@ def main(
         device = torch.device(device)
     print("using device", device)
 
-    atlas_src = Path(Path(__file__).parent / "segmentation_pipeline/atlas")
-    atlas_dest = Path(dataset_path) / "atlas"
-    if not atlas_dest.exists():
-        os.symlink(atlas_src, atlas_dest)
+    roi_union_path = Path(__file__).parent / "segmentation_pipeline/atlas/whole_roi_union.nii.gz"
 
     ensemble_path = Path(__file__).parent / "saved_models/hippo/standard"
     contexts = []
     for file_path in ensemble_path.iterdir():
         context = TorchContext(device, file_path=file_path, variables=dict(DATASET_PATH=dataset_path))
         context.keep_components(("model", "trainer", "dataset"))
+
+        context.component_definitions[0]['params']['subject_loader'].loaders[7] = ImageLoader(
+            glob_pattern=str(roi_union_path),
+            image_name="whole_roi_union",
+            image_constructor=tio.LabelMap, uniform=True
+        )
+        
         context.init_components()
 
         context.model = EnsembleFlips(context.model, strategy="majority", spatial_dims=(3, 4))
@@ -142,6 +147,5 @@ def main(
 
         save_subjects_img(subjects, 'y_pred', out_folder, output_filename)
 
-    os.unlink(atlas_dest)
 if __name__ == "__main__":
     fire.Fire(main)
