@@ -22,7 +22,7 @@ def inference(subjects, predictor, model, device):
     model.eval()
 
     subject_names = [subject['name'] for subject in subjects]
-    print(f"running inference for subjects: {subject_names}")
+    print(f"generating segmentations for subjects: {subject_names}")
 
     with torch.no_grad():
         subjects, _ = predictor.predict(model=model, device=device, subjects=subjects)
@@ -81,31 +81,32 @@ def main(
     dataset_path: str,
     out_folder: str,
     output_filename: str,
-    device: str = "cuda:0",
     num_workers: int = 0,
     batch_size: int = 4,
+    cpu: bool = False,
 ):
     """Auto Hippocampus Segmentation  Run with `python predict.py` followed by args
 
     Args:
-        dataset_path: Path to the subjects data folders.
+        dataset_path: Path to the subjects data folders. See readme.md for directory structure.
         out_folder: Folder for output.
         output_filename: File name for segmentation output. Provided extensions will be ignored and file will be saved ass .nii.gz.
-            If output_filename is not provided the context name is used.
-        device: PyTorch device to use. Set to 'cpu' if there are issues with gpu usage. A specific gpu can be selected
-            using 'cuda:0' or 'cuda:1' on a multi-gpu machine.
         num_workers: How many CPU threads to use for data loading, preprocessing, and augmentation.
         batch_size: How many subjects should be run through the model at once. If memory issues, reduce batch size.
+        cpu: Sets the pytorch device to use cpu. Use if there are issues with gpu.
     """
 
-    if device.startswith("cuda"):
+
+    if not cpu:
         if torch.cuda.is_available():
-            device = torch.device(device)
-        else:
+            device = torch.device("cuda:0")
+        else: 
             device = torch.device("cpu")
             print("cuda not available, switched to cpu")
     else:
-        device = torch.device(device)
+        device = torch.device("cpu")
+
+
     print("using device", device)
 
     roi_union_path = Path(__file__).parent / "segmentation_pipeline/atlas/whole_roi_union.nii.gz"
@@ -121,7 +122,7 @@ def main(
             image_name="whole_roi_union",
             image_constructor=tio.LabelMap, uniform=True
         )
-        
+
         context.init_components()
 
         context.model = EnsembleFlips(context.model, strategy="majority", spatial_dims=(3, 4))
